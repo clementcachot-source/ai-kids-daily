@@ -726,7 +726,7 @@ export default function App() {
     const profileName = profile ? PROFILES_DATA[profile].name : "l'élève";
     const profileAge = profile ? PROFILES_DATA[profile].age : 12;
     try {
-      const resp = await fetch("http://localhost:3001/api/cleo", {
+      const resp = await fetch("/api/cleo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
