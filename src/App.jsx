@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "./supabaseClient";
 
 // ─── DATA ───────────────────────────────────────────────────────────────────
 
@@ -6,14 +7,12 @@ const PROFILES_DATA = {
   adele: {
     id: "adele", name: "Adèle", age: 13, avatar: "🌸",
     color: "#e879a0", light: "#fce7f3", colorDark: "#be185d",
-    xp: 280, maxXp: 1000, streak: 3, lessons: 4, score: 92,
-    phase: 14, phaseLabel: "Leçon 4 / 28",
+    maxXp: 1000,
   },
   soline: {
     id: "soline", name: "Soline", age: 12, avatar: "⚡",
     color: "#7c3aed", light: "#ede9fe", colorDark: "#5b21b6",
-    xp: 150, maxXp: 1000, streak: 1, lessons: 2, score: 88,
-    phase: 7, phaseLabel: "Leçon 2 / 28",
+    maxXp: 1000,
   },
 };
 
@@ -44,7 +43,6 @@ const PHASES = [
   },
 ];
 
-// 30 leçons niveau 1 — structure : cours → exemple → exercice
 const LESSONS = [
   {
     id: 1, phase: 1, title: "Qu'est-ce qu'un programme ?",
@@ -359,11 +357,9 @@ const css = `
 
   .app { min-height: 100vh; position: relative; }
 
-  /* SCREENS */
   .screen { display: none; padding: 1.5rem 1.25rem 88px; max-width: 480px; margin: 0 auto; }
   .screen.active { display: block; }
 
-  /* CARDS */
   .card {
     background: var(--surface);
     border-radius: var(--radius);
@@ -372,7 +368,6 @@ const css = `
     margin-bottom: 0.875rem;
   }
 
-  /* BUTTONS */
   .btn {
     display: inline-flex; align-items: center; justify-content: center;
     gap: 6px; padding: 0.65rem 1.25rem;
@@ -387,7 +382,6 @@ const css = `
   .btn-full { width: 100%; }
   .btn-sm { padding: 0.45rem 0.9rem; font-size: 13px; }
 
-  /* WELCOME */
   .welcome-hero { text-align: center; padding: 2.5rem 1rem 2rem; }
   .welcome-logo { font-size: 40px; margin-bottom: 10px; }
   .welcome-title { font-size: 28px; font-weight: 800; color: var(--text); margin-bottom: 6px; letter-spacing: -0.5px; }
@@ -417,12 +411,10 @@ const css = `
     border-radius: 999px; display: inline-block; margin-bottom: 10px;
   }
 
-  /* XP BAR */
   .xp-bar-wrap { background: var(--bg); border-radius: 999px; height: 6px; overflow: hidden; }
   .xp-bar { height: 100%; border-radius: 999px; transition: width 0.6s ease; }
   .xp-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
-  /* DASHBOARD */
   .dash-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1.25rem; }
   .dash-avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
 
@@ -455,7 +447,6 @@ const css = `
   .badge-chip.locked { opacity: 0.35; }
   .badge-icon { font-size: 18px; }
 
-  /* ROADMAP */
   .phase-card {
     background: var(--surface); border: 1.5px solid var(--border);
     border-radius: var(--radius); padding: 1rem 1.25rem;
@@ -466,7 +457,6 @@ const css = `
   .phase-icon-wrap { width: 44px; height: 44px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
   .phase-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
 
-  /* LESSON */
   .step-row {
     display: flex; align-items: center; gap: 12px; padding: 0.75rem;
     border-radius: var(--radius-sm); background: var(--bg);
@@ -485,7 +475,6 @@ const css = `
   .step-text { font-size: 14px; font-weight: 700; }
   .step-sub { font-size: 12px; color: var(--muted); }
 
-  /* CONTENT */
   .content-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 0.875rem; }
   .content-title { font-size: 17px; font-weight: 800; margin-bottom: 10px; }
   .content-body { font-size: 15px; line-height: 1.7; color: var(--text); white-space: pre-line; }
@@ -508,10 +497,6 @@ const css = `
     font-family: 'JetBrains Mono', monospace; font-size: 12px;
     color: #a6e3a1; line-height: 1.6; white-space: pre;
   }
-  .code-kw { color: #cba6f7; }
-  .code-str { color: #a6e3a1; }
-  .code-fn { color: #89b4fa; }
-  .code-comment { color: #6c7086; }
 
   .code-input {
     width: 100%; min-height: 100px;
@@ -523,7 +508,6 @@ const css = `
   }
   .code-input:focus { border-color: rgba(255,255,255,0.2); }
 
-  /* CLEO */
   .cleo-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 0.875rem; }
   .cleo-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .cleo-avatar {
@@ -540,7 +524,6 @@ const css = `
     min-height: 52px; color: var(--text);
   }
 
-  /* DOTS */
   .dots { display: flex; gap: 5px; align-items: center; padding: 4px 0; }
   .dot {
     width: 7px; height: 7px; border-radius: 50%;
@@ -550,11 +533,9 @@ const css = `
   .dot:nth-child(3) { animation-delay: 0.4s; }
   @keyframes bounce { 0%,100%{transform:translateY(0);opacity:0.4} 50%{transform:translateY(-5px);opacity:1} }
 
-  /* CONFETTI */
   .confetti { position: fixed; width: 9px; height: 9px; border-radius: 2px; animation: fall 2.2s ease-in forwards; z-index: 500; pointer-events: none; }
   @keyframes fall { 0%{opacity:1;transform:translateY(-20px) rotate(0deg)} 100%{opacity:0;transform:translateY(105vh) rotate(900deg)} }
 
-  /* TOAST */
   .toast {
     position: fixed; top: 1rem; left: 50%;
     transform: translateX(-50%) translateY(-80px);
@@ -565,7 +546,6 @@ const css = `
   }
   .toast.show { transform: translateX(-50%) translateY(0); }
 
-  /* NAV */
   .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: var(--surface); border-top: 1px solid var(--border);
@@ -581,7 +561,6 @@ const css = `
   .nav-btn.active { color: var(--text); }
   .nav-icon { font-size: 22px; }
 
-  /* PIN */
   .pin-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 65vh; }
   .pin-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
   .pin-sub { font-size: 14px; color: var(--muted); margin-bottom: 1.5rem; }
@@ -599,7 +578,6 @@ const css = `
   .pin-error { color: #e24b4a; font-size: 13px; font-weight: 700; margin-top: 8px; min-height: 20px; text-align: center; }
   .pin-hint { font-size: 12px; color: var(--hint); margin-top: 16px; }
 
-  /* PARENT */
   .tab-bar { display: flex; background: var(--bg); border-radius: var(--radius-sm); padding: 3px; margin-bottom: 1.25rem; gap: 3px; }
   .tab-btn { flex: 1; padding: 0.5rem; text-align: center; font-size: 13px; font-weight: 700; border-radius: 8px; cursor: pointer; color: var(--muted); border: none; background: transparent; font-family: 'Nunito', sans-serif; transition: all 0.15s; }
   .tab-btn.active { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
@@ -627,10 +605,12 @@ const css = `
 
   .back-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--muted); cursor: pointer; background: none; border: none; font-family: 'Nunito', sans-serif; margin-bottom: 1.25rem; padding: 0; }
 
-  /* COMPLETE */
   .complete-screen { text-align: center; padding: 2rem 0; }
   .complete-trophy { font-size: 64px; margin-bottom: 12px; }
   .xp-gained { display: inline-block; background: var(--bg); border-radius: var(--radius-sm); padding: 0.75rem 1.5rem; font-size: 24px; font-weight: 800; margin: 1rem 0; }
+
+  .loading-overlay { display: flex; align-items: center; justify-content: center; min-height: 60vh; flex-direction: column; gap: 12px; }
+  .loading-text { font-size: 14px; color: var(--muted); font-weight: 600; }
 `;
 
 // ─── MAIN APP ────────────────────────────────────────────────────────────────
@@ -638,11 +618,13 @@ const css = `
 export default function App() {
   const [screen, setScreen] = useState("welcome");
   const [profile, setProfile] = useState(null);
+  const [progression, setProgression] = useState({ adele: null, soline: null });
+  const [loadingDb, setLoadingDb] = useState(true);
   const [pinEntry, setPinEntry] = useState("");
   const [pinError, setPinError] = useState("");
   const [parentTab, setParentTab] = useState("adele");
-  const [currentLesson, setCurrentLesson] = useState(LESSONS[2]);
-  const [currentStep, setCurrentStep] = useState(2);
+  const [currentLesson, setCurrentLesson] = useState(LESSONS[0]);
+  const [currentStep, setCurrentStep] = useState(0);
   const [cleoMessage, setCleoMessage] = useState("");
   const [cleoLoading, setCleoLoading] = useState(false);
   const [cleoValid, setCleoValid] = useState(null);
@@ -652,6 +634,29 @@ export default function App() {
   const [lessonDone, setLessonDone] = useState(false);
   const toastTimer = useRef(null);
   const CORRECT_PIN = "1234";
+
+  // ── Charger la progression depuis Supabase ──
+  useEffect(() => {
+    const loadProgression = async () => {
+      setLoadingDb(true);
+      try {
+        const { data, error } = await supabase
+          .from("progression")
+          .select("*");
+        if (error) throw error;
+        const prog = {};
+        data.forEach(row => {
+          prog[row.profil] = row;
+        });
+        setProgression(prog);
+      } catch (err) {
+        console.error("Erreur Supabase:", err);
+        showToast("Impossible de charger la progression 😕");
+      }
+      setLoadingDb(false);
+    };
+    loadProgression();
+  }, []);
 
   useEffect(() => {
     const styleEl = document.createElement("style");
@@ -680,6 +685,54 @@ export default function App() {
       document.body.appendChild(el);
       setTimeout(() => el.remove(), 2500);
     }
+  };
+
+  // ── Sauvegarder dans Supabase après une leçon ──
+  const saveProgression = async (profileId, xpGained) => {
+    const current = progression[profileId];
+    if (!current) return;
+    const today = new Date().toISOString().split("T")[0];
+    const newXp = (current.xp || 0) + xpGained;
+    const newLecons = (current.lecons_terminees || 0) + 1;
+    const newStreak = current.derniere_activite === today
+      ? current.streak
+      : (current.streak || 0) + 1;
+
+    const { error } = await supabase
+      .from("progression")
+      .update({
+        xp: newXp,
+        lecons_terminees: newLecons,
+        streak: newStreak,
+        derniere_activite: today,
+      })
+      .eq("profil", profileId);
+
+    if (error) {
+      console.error("Erreur sauvegarde:", error);
+      showToast("Progression non sauvegardée 😕");
+    } else {
+      setProgression(prev => ({
+        ...prev,
+        [profileId]: { ...prev[profileId], xp: newXp, lecons_terminees: newLecons, streak: newStreak, derniere_activite: today }
+      }));
+      showToast("Progression sauvegardée ! 🎉");
+    }
+  };
+
+  // ── Helper : données du profil actif (Supabase + statique) ──
+  const getProfileData = (id) => {
+    const base = PROFILES_DATA[id];
+    const db = progression[id];
+    return {
+      ...base,
+      xp: db?.xp ?? 0,
+      lessons: db?.lecons_terminees ?? 0,
+      streak: db?.streak ?? 0,
+      score: 90,
+      phase: db ? Math.round(((db.lecons_terminees || 0) / 28) * 100) : 0,
+      phaseLabel: `Leçon ${db?.lecons_terminees ?? 0} / 28`,
+    };
   };
 
   // PIN
@@ -757,22 +810,37 @@ export default function App() {
     setCleoLoading(false);
   };
 
-  const validateLesson = () => {
+  const validateLesson = async () => {
+    if (profile) {
+      await saveProgression(profile, cleoXp || 50);
+    }
     setLessonDone(true);
     setCleoMessage(""); setCleoValid(null);
   };
 
   // ── RENDER ──────────────────────────────────────────────────────────────────
 
-  const p = profile ? PROFILES_DATA[profile] : null;
+  const p = profile ? getProfileData(profile) : null;
+
+  if (loadingDb) {
+    return (
+      <div className="app">
+        <style>{css}</style>
+        <div className="loading-overlay">
+          <div style={{ fontSize: 40 }}>✨</div>
+          <div className="dots"><div className="dot" /><div className="dot" /><div className="dot" /></div>
+          <div className="loading-text">Chargement de ta progression…</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
-      {/* TOAST */}
       <div className={`toast ${toast.show ? "show" : ""}`}>{toast.msg}</div>
 
       {/* WELCOME */}
-      <div className={`screen ${screen === "welcome" ? "active" : ""}`} id="screen-welcome">
+      <div className={`screen ${screen === "welcome" ? "active" : ""}`}>
         <div className="welcome-hero">
           <div className="welcome-logo">✨</div>
           <div className="welcome-title">AI Kids Daily</div>
@@ -780,26 +848,28 @@ export default function App() {
           <div className="welcome-tagline">10 min par soir. Dans 2 ans, top 1%.</div>
         </div>
         <div className="profiles-grid">
-          {Object.values(PROFILES_DATA).map(prof => (
-            <div
-              key={prof.id}
-              className={`profile-card ${prof.id}`}
-              onClick={() => { setProfile(prof.id); goTo("dashboard"); }}
-            >
-              <div className="profile-avatar" style={{ background: prof.light }}>
-                {prof.avatar}
+          {Object.values(PROFILES_DATA).map(prof => {
+            const dbData = progression[prof.id];
+            const xp = dbData?.xp ?? 0;
+            return (
+              <div
+                key={prof.id}
+                className={`profile-card ${prof.id}`}
+                onClick={() => { setProfile(prof.id); goTo("dashboard"); }}
+              >
+                <div className="profile-avatar" style={{ background: prof.light }}>{prof.avatar}</div>
+                <div className="profile-name">{prof.name}</div>
+                <div className="profile-age">{prof.age} ans</div>
+                <div className="profile-pill" style={{ background: prof.light, color: prof.color }}>
+                  Niveau 1 · Éveil
+                </div>
+                <div className="xp-bar-wrap">
+                  <div className="xp-bar" style={{ width: `${(xp / prof.maxXp) * 100}%`, background: prof.color }} />
+                </div>
+                <div className="xp-label">{xp} / {prof.maxXp} XP</div>
               </div>
-              <div className="profile-name">{prof.name}</div>
-              <div className="profile-age">{prof.age} ans</div>
-              <div className="profile-pill" style={{ background: prof.light, color: prof.color }}>
-                Niveau 1 · Éveil
-              </div>
-              <div className="xp-bar-wrap">
-                <div className="xp-bar" style={{ width: `${(prof.xp / prof.maxXp) * 100}%`, background: prof.color }} />
-              </div>
-              <div className="xp-label">{prof.xp} / {prof.maxXp} XP</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <button className="btn btn-outline btn-full" style={{ fontSize: 13, color: "var(--muted)" }} onClick={() => goTo("pin")}>
           🔒 Espace parents
@@ -809,7 +879,6 @@ export default function App() {
       {/* DASHBOARD */}
       {p && (
         <div className={`screen ${screen === "dashboard" ? "active" : ""}`}>
-          {/* Header */}
           <div className="dash-header">
             <div className="dash-avatar" style={{ background: p.light }}>{p.avatar}</div>
             <div>
@@ -819,7 +888,6 @@ export default function App() {
             <button className="btn btn-outline btn-sm" style={{ marginLeft: "auto" }} onClick={() => goTo("welcome")}>Changer</button>
           </div>
 
-          {/* Streak */}
           <div className="streak-card" style={{ background: p.light }}>
             <div className="streak-fire">🔥</div>
             <div>
@@ -828,14 +896,12 @@ export default function App() {
             </div>
           </div>
 
-          {/* Stats */}
           <div className="stats-grid">
             <div className="stat-card"><div className="stat-num">{p.lessons}</div><div className="stat-label">leçons</div></div>
             <div className="stat-card"><div className="stat-num">{p.xp}</div><div className="stat-label">XP</div></div>
             <div className="stat-card"><div className="stat-num">{p.score}%</div><div className="stat-label">score moy.</div></div>
           </div>
 
-          {/* Phase progress */}
           <div className="card">
             <div className="section-title">Phase 1 · Éveil 🌱</div>
             <div className="xp-bar-wrap" style={{ height: 10, marginBottom: 6 }}>
@@ -844,15 +910,14 @@ export default function App() {
             <div style={{ fontSize: 12, color: "var(--muted)" }}>{p.phaseLabel} · Mois 1 sur 3</div>
           </div>
 
-          {/* Badges */}
           <div className="section-title">Badges</div>
           <div className="badges-row">
             {[
-              { icon: "🐍", label: "Premier print", locked: false },
-              { icon: "📦", label: "Variable maîtrisée", locked: false },
-              { icon: "🔄", label: "Boucle for", locked: true },
-              { icon: "🔀", label: "if/else pro", locked: true },
-              { icon: "📋", label: "Listes", locked: true },
+              { icon: "🐍", label: "Premier print", locked: p.lessons < 1 },
+              { icon: "📦", label: "Variable maîtrisée", locked: p.lessons < 3 },
+              { icon: "🔄", label: "Boucle for", locked: p.lessons < 8 },
+              { icon: "🔀", label: "if/else pro", locked: p.lessons < 6 },
+              { icon: "📋", label: "Listes", locked: p.lessons < 9 },
               { icon: "🤖", label: "Hello IA", locked: true },
             ].map((b, i) => (
               <div key={i} className={`badge-chip ${b.locked ? "locked" : ""}`}>
@@ -862,11 +927,10 @@ export default function App() {
             ))}
           </div>
 
-          {/* CTA */}
           <button
             className="btn btn-primary btn-full"
             style={{ background: p.color, marginBottom: 8 }}
-            onClick={() => openLesson(LESSONS[currentLesson.id - 1] || LESSONS[0])}
+            onClick={() => openLesson(LESSONS[Math.min(p.lessons, LESSONS.length - 1)])}
           >
             Leçon du jour →
           </button>
@@ -874,7 +938,6 @@ export default function App() {
             Voir la roadmap 2 ans
           </button>
 
-          {/* Nav */}
           <div className="bottom-nav">
             <button className="nav-btn active"><span className="nav-icon">🏠</span>Accueil</button>
             <button className="nav-btn" onClick={() => goTo("roadmap")}><span className="nav-icon">🗺</span>Roadmap</button>
@@ -889,9 +952,10 @@ export default function App() {
         <button className="back-btn" onClick={() => goTo("dashboard")}>← Retour</button>
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Toutes les leçons</div>
         <div style={{ fontSize: 14, color: "var(--muted)", marginBottom: 20 }}>Phase 1 · Éveil — 12 leçons</div>
-        {LESSONS.map((lesson, i) => {
-          const done = p && lesson.id <= p.lessons;
-          const current = p && lesson.id === p.lessons + 1;
+        {LESSONS.map((lesson) => {
+          const lessonsCount = p?.lessons ?? 0;
+          const done = lesson.id <= lessonsCount;
+          const current = lesson.id === lessonsCount + 1;
           return (
             <div
               key={lesson.id}
@@ -945,15 +1009,6 @@ export default function App() {
             {i === 0 && <div className="phase-badge" style={{ background: ph.bg, color: ph.text }}>En cours</div>}
           </div>
         ))}
-        <div className="card" style={{ marginTop: 8 }}>
-          <div className="section-title" style={{ marginBottom: 8 }}>Dans 2 ans</div>
-          <div style={{ fontSize: 14, lineHeight: 1.7 }}>
-            Tu codes un vrai projet IA de A à Z.<br />
-            Tu comprends comment les modèles fonctionnent.<br />
-            Tu as un portfolio qui impressionne à 14–15 ans.<br />
-            <span style={{ color: "var(--muted)" }}>Top 1% des jeunes qui utilisent l'IA.</span>
-          </div>
-        </div>
         <div className="bottom-nav">
           <button className="nav-btn" onClick={() => goTo("dashboard")}><span className="nav-icon">🏠</span>Accueil</button>
           <button className="nav-btn active"><span className="nav-icon">🗺</span>Roadmap</button>
@@ -966,7 +1021,6 @@ export default function App() {
       <div className={`screen ${screen === "lesson" ? "active" : ""}`}>
         <button className="back-btn" onClick={() => goTo("lessons")}>← Retour</button>
 
-        {/* Lesson header */}
         <div className="card" style={{ marginBottom: "0.875rem" }}>
           <div style={{
             fontSize: 11, fontWeight: 700, padding: "3px 10px",
@@ -979,7 +1033,6 @@ export default function App() {
           <div style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.5 }}>{currentLesson.desc}</div>
         </div>
 
-        {/* Steps */}
         <div className="card">
           {currentLesson.steps.map((step, i) => {
             const isDone = i < currentStep || lessonDone;
@@ -1009,7 +1062,6 @@ export default function App() {
           })}
         </div>
 
-        {/* Step content */}
         {!lessonDone && currentLesson.steps.map((step, i) => {
           if (i !== currentStep) return null;
           return (
@@ -1094,7 +1146,6 @@ export default function App() {
           );
         })}
 
-        {/* Cleo */}
         {(cleoLoading || cleoMessage) && (
           <div className="cleo-card">
             <div className="cleo-header">
@@ -1139,7 +1190,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Complete */}
         {lessonDone && (
           <div className="content-card complete-screen">
             <div className="complete-trophy">🎉</div>
@@ -1147,7 +1197,7 @@ export default function App() {
             <div style={{ fontSize: 14, color: "var(--muted)", marginBottom: 12 }}>
               Tu viens de maîtriser : <strong>{currentLesson.title}</strong>
             </div>
-            <div className="xp-gained">+50 XP</div>
+            <div className="xp-gained">+{cleoXp || 50} XP</div>
             <button
               className="btn btn-primary btn-full"
               style={{ background: p ? p.color : "#7c3aed", marginTop: 8 }}
@@ -1205,160 +1255,50 @@ export default function App() {
           ))}
         </div>
 
-        {/* ADELE TAB */}
-        <div className={`child-tab ${parentTab === "adele" ? "active" : ""}`}>
-          <div className="good-box">🔥 3 jours de suite — Adèle est en bonne dynamique !</div>
-          <div className="stats-grid" style={{ marginBottom: "1rem" }}>
-            <div className="stat-card"><div className="stat-num" style={{ color: "var(--adele)" }}>4</div><div className="stat-label">leçons</div></div>
-            <div className="stat-card"><div className="stat-num">92%</div><div className="stat-label">score moyen</div></div>
-            <div className="stat-card"><div className="stat-num">38 min</div><div className="stat-label">cette semaine</div></div>
-          </div>
-          <div className="card">
-            <div className="section-title">Progression roadmap</div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-              <span>Phase 1 · Éveil</span><span style={{ color: "var(--adele)" }}>14%</span>
-            </div>
-            <div className="xp-bar-wrap" style={{ height: 8, marginBottom: 8 }}>
-              <div className="xp-bar" style={{ width: "14%", background: "var(--adele)" }} />
-            </div>
-            <div style={{ fontSize: 12, color: "var(--muted)" }}>Leçon 4 / 28 · Objectif phase 1 : mars 2026</div>
-          </div>
-          <div className="card">
-            <div className="section-title">Compétences</div>
-            {[
-              { name: "Python · print & variables", pct: 80 },
-              { name: "Logique & conditions", pct: 20 },
-              { name: "Boucles for", pct: 0 },
-            ].map((s, i) => (
-              <div key={i} className="skill-row">
-                <div className="skill-label">
-                  <span>{s.name}</span>
-                  <span style={{ color: s.pct > 0 ? "var(--adele)" : "var(--hint)" }}>{s.pct}%</span>
+        {["adele", "soline"].map(pid => {
+          const pd = getProfileData(pid);
+          const db = progression[pid];
+          const streakOk = (db?.streak ?? 0) >= 2;
+          return (
+            <div key={pid} className={`child-tab ${parentTab === pid ? "active" : ""}`}>
+              {streakOk
+                ? <div className="good-box">🔥 {pd.streak} jours de suite — {pd.name} est en bonne dynamique !</div>
+                : <div className="alert-box">⚠️ {pd.name} n'a pas beaucoup de streak — encourage-la ce soir !</div>
+              }
+              <div className="stats-grid" style={{ marginBottom: "1rem" }}>
+                <div className="stat-card"><div className="stat-num" style={{ color: pd.color }}>{pd.lessons}</div><div className="stat-label">leçons</div></div>
+                <div className="stat-card"><div className="stat-num">{pd.xp} XP</div><div className="stat-label">total</div></div>
+                <div className="stat-card"><div className="stat-num">🔥 {pd.streak}j</div><div className="stat-label">streak</div></div>
+              </div>
+              <div className="card">
+                <div className="section-title">Progression roadmap</div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                  <span>Phase 1 · Éveil</span><span style={{ color: pd.color }}>{pd.phase}%</span>
                 </div>
-                <div className="xp-bar-wrap" style={{ height: 6 }}>
-                  <div className="xp-bar" style={{ width: `${s.pct}%`, background: "var(--adele)" }} />
+                <div className="xp-bar-wrap" style={{ height: 8, marginBottom: 8 }}>
+                  <div className="xp-bar" style={{ width: `${pd.phase}%`, background: pd.color }} />
                 </div>
-              </div>
-            ))}
-          </div>
-          <div className="card">
-            <div className="section-title">Évaluations</div>
-            <div className="eval-row">
-              <div className="eval-score" style={{ color: "#16a34a" }}>95%</div>
-              <div>
-                <div className="eval-name">Éval 1 · print & variables</div>
-                <div className="eval-date" style={{ marginTop: 2 }}>il y a 2 jours · "Adèle maîtrise très bien les bases !"</div>
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>{pd.phaseLabel}</div>
               </div>
             </div>
-            <div className="eval-row" style={{ opacity: 0.4 }}>
-              <div className="eval-score" style={{ color: "var(--hint)" }}>—</div>
-              <div><div className="eval-name">Éval 2 · conditions & if/else</div><div className="eval-date" style={{ marginTop: 2 }}>pas encore atteinte</div></div>
-            </div>
-          </div>
-          <div className="card">
-            <div className="section-title">Activité récente</div>
-            {[
-              { text: "Leçon 4 terminée · Variables avancées", date: "Aujourd'hui · 12 min · Score 90%", color: "var(--adele)" },
-              { text: "Évaluation 1 réussie · 95%", date: "Hier · 8 min", color: "var(--adele)" },
-              { text: "Leçon 3 terminée · print() maîtrisé", date: "Il y a 2 jours · 9 min · Score 88%", color: "var(--hint)" },
-            ].map((item, i) => (
-              <div key={i} className="timeline-item">
-                <div className="tl-dot" style={{ background: item.color }} />
-                <div><div className="tl-text">{item.text}</div><div className="tl-date">{item.date}</div></div>
-              </div>
-            ))}
-          </div>
-        </div>
+          );
+        })}
 
-        {/* SOLINE TAB */}
-        <div className={`child-tab ${parentTab === "soline" ? "active" : ""}`}>
-          <div className="alert-box">⚠️ Soline n'a pas fait de leçon depuis 2 jours — encourage-la ce soir !</div>
-          <div className="stats-grid" style={{ marginBottom: "1rem" }}>
-            <div className="stat-card"><div className="stat-num" style={{ color: "var(--soline)" }}>2</div><div className="stat-label">leçons</div></div>
-            <div className="stat-card"><div className="stat-num">88%</div><div className="stat-label">score moyen</div></div>
-            <div className="stat-card"><div className="stat-num">18 min</div><div className="stat-label">cette semaine</div></div>
-          </div>
-          <div className="card">
-            <div className="section-title">Progression roadmap</div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-              <span>Phase 1 · Éveil</span><span style={{ color: "var(--soline)" }}>7%</span>
-            </div>
-            <div className="xp-bar-wrap" style={{ height: 8, marginBottom: 8 }}>
-              <div className="xp-bar" style={{ width: "7%", background: "var(--soline)" }} />
-            </div>
-            <div style={{ fontSize: 12, color: "var(--muted)" }}>Leçon 2 / 28 · Elle prend son rythme</div>
-          </div>
-          <div className="card">
-            <div className="section-title">Compétences</div>
-            {[
-              { name: "Python · print", pct: 60 },
-              { name: "Variables", pct: 10 },
-            ].map((s, i) => (
-              <div key={i} className="skill-row">
-                <div className="skill-label">
-                  <span>{s.name}</span>
-                  <span style={{ color: s.pct > 0 ? "var(--soline)" : "var(--hint)" }}>{s.pct}%</span>
-                </div>
-                <div className="xp-bar-wrap" style={{ height: 6 }}>
-                  <div className="xp-bar" style={{ width: `${s.pct}%`, background: "var(--soline)" }} />
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="card">
-            <div className="section-title">Évaluations</div>
-            <div className="eval-row" style={{ opacity: 0.4 }}>
-              <div className="eval-score" style={{ color: "var(--hint)" }}>—</div>
-              <div><div className="eval-name">Éval 1 · print & variables</div><div className="eval-date" style={{ marginTop: 2 }}>1 leçon manquante</div></div>
-            </div>
-          </div>
-        </div>
-
-        {/* GLOBAL TAB */}
         <div className={`child-tab ${parentTab === "global" ? "active" : ""}`}>
           <div className="card">
-            <div className="section-title">Cette semaine</div>
+            <div className="section-title">Comparatif</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 8 }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--adele)", marginBottom: 8 }}>🌸 Adèle</div>
-                <div style={{ fontSize: 13, lineHeight: 2, color: "var(--muted)" }}>
-                  4 leçons<br />38 min<br />Score 92%<br />🔥 Streak 3j
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--soline)", marginBottom: 8 }}>⚡ Soline</div>
-                <div style={{ fontSize: 13, lineHeight: 2, color: "var(--muted)" }}>
-                  2 leçons<br />18 min<br />Score 88%<br />Streak 1j
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="card">
-            <div className="section-title" style={{ marginBottom: 12 }}>Roadmap globale</div>
-            {PHASES.map((ph, i) => (
-              <div key={i} style={{ marginBottom: 12, opacity: i === 0 ? 1 : i === 1 ? 0.5 : 0.25 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 6 }}>{ph.icon} Phase {i + 1} · {ph.name} <span style={{ fontWeight: 400, color: "var(--muted)" }}>({ph.months})</span></div>
-                {i === 0 && (
-                  <>
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>Adèle</div>
-                    <div className="xp-bar-wrap" style={{ height: 6, marginBottom: 6 }}>
-                      <div className="xp-bar" style={{ width: "14%", background: "var(--adele)" }} />
+              {["adele", "soline"].map(pid => {
+                const pd = getProfileData(pid);
+                return (
+                  <div key={pid}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: pd.color, marginBottom: 8 }}>{pd.avatar} {pd.name}</div>
+                    <div style={{ fontSize: 13, lineHeight: 2, color: "var(--muted)" }}>
+                      {pd.lessons} leçons<br />{pd.xp} XP<br />🔥 Streak {pd.streak}j
                     </div>
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>Soline</div>
-                    <div className="xp-bar-wrap" style={{ height: 6 }}>
-                      <div className="xp-bar" style={{ width: "7%", background: "var(--soline)" }} />
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="card">
-            <div className="section-title" style={{ marginBottom: 8 }}>Conseils Cleo</div>
-            <div style={{ fontSize: 13, lineHeight: 1.8 }}>
-              · Adèle avance bien — elle peut passer à la leçon suivante.<br />
-              · Soline a besoin d'encouragement. Assieds-toi 5 min avec elle pour démarrer.<br />
-              · Prochaine éval Adèle dans 2 leçons.
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
